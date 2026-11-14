@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+app/monitoreo/
+salidas/
+salidas_acif104.zip
