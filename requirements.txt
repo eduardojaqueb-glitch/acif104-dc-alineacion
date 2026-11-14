@@ -1,0 +1,11 @@
+# Notebook de experimentos (Google Colab ya trae la mayoría de estas bibliotecas)
+pandas
+numpy
+scipy
+matplotlib
+seaborn
+scikit-learn
+imbalanced-learn
+tensorflow
+shap
+joblib

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿Héroe o villano? · Clasificador de alineación</title>
+<style>
+:root{--fondo:#0f1724;--panel:#16233a;--borde:#2f4363;--texto:#e8edf4;--suave:#9fb0c8;--heroe:#3b9cff;--villano:#f08a24}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--texto);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid #23324a}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;margin:0}
+nav{display:flex;gap:8px;flex-wrap:wrap}
+nav button{background:transparent;border:0;color:#b9c6d8;padding:10px 16px;border-radius:8px;font:inherit;cursor:pointer;min-height:44px}
+nav button[aria-selected="true"]{background:#1b2a40;color:var(--texto);font-weight:600}
+main{max-width:1200px;margin:0 auto;padding:28px 32px 48px}
+.fila{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start}
+.panel{background:var(--panel);border:1px solid #23324a;border-radius:16px;padding:24px}
+.form{flex:1 1 340px;display:flex;flex-direction:column;gap:16px}
+.res{flex:999 1 460px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#b9c6d8}
+select,input{height:44px;border-radius:10px;border:1px solid var(--borde);background:#0f1a2b;color:var(--texto);padding:0 12px;font:inherit}
+.btn{height:50px;border:0;border-radius:12px;background:var(--heroe);color:#06111f;font-weight:700;font-size:16px;cursor:pointer}
+.btn2{height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--borde);background:transparent;color:var(--texto);font-weight:600;cursor:pointer}
+.suave{color:var(--suave);font-size:13px;line-height:1.5;margin:0}
+.dona{width:150px;height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.dona>div{width:112px;height:112px;border-radius:50%;background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.barra{display:grid;grid-template-columns:150px 1fr 64px;gap:10px;align-items:center;font-size:14px}
+.pista{position:relative;height:12px;background:#0f1a2b;border-radius:999px}
+.pista span{position:absolute;top:0;height:12px;border-radius:999px}
+.pista::after{content:"";position:absolute;left:50%;top:-3px;width:1px;height:18px;background:#4a5f80}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.kpi{background:var(--panel);border:1px solid #23324a;border-radius:14px;padding:16px}
+.kpi b{display:block;font-size:24px;margin-top:4px;font-family:"Space Grotesk",Inter,sans-serif}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #23324a}
+th{color:var(--suave);font-weight:500}
+.alerta{background:#3a2a14;color:#ffd29a;border-radius:10px;padding:10px 14px;font-size:14px}
+.ok{background:#12324f;color:#cfe6ff;border-radius:10px;padding:10px 14px;font-size:14px}
+.oculto{display:none !important}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}.barra{grid-template-columns:110px 1fr 56px}main{padding:20px 16px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 style="font-size:20px">¿Héroe o villano?</h1>
+    <p class="suave">Clasificador de alineación de personajes DC · ACIF104</p>
+  </div>
+  <nav role="tablist" aria-label="Secciones">
+    <button role="tab" aria-selected="true" data-tab="predictor">Predictor</button>
+    <button role="tab" aria-selected="false" data-tab="monitoreo">Monitoreo</button>
+    <button role="tab" aria-selected="false" data-tab="modelo">Modelo</button>
+  </nav>
+</header>
+<main>
+  <!-- PREDICTOR -->
+  <section id="predictor" class="fila">
+    <form id="form" class="panel form" novalidate>
+      <h2 style="font-size:22px">Describe al personaje</h2>
+      <p class="suave">Si no conoces un atributo, déjalo en «No informado»: el modelo lo trata como dato faltante, igual que en el entrenamiento.</p>
+      <div class="grid2" id="campos-cat"></div>
+      <div class="grid2">
+        <label>N.º de apariciones<input type="number" name="APPEARANCES" min="1" max="10000" placeholder="Ej.: 120"></label>
+        <label>Año de primera aparición<input type="number" name="YEAR" min="1935" max="2030" placeholder="Ej.: 1985"></label>
+      </div>
+      <button class="btn" type="submit">Predecir alineación</button>
+      <p id="error" class="alerta oculto" role="alert"></p>
+    </form>
+    <div class="res" aria-live="polite">
+      <div id="vacio" class="panel" style="text-align:center;border-style:dashed">
+        <h2 style="font-size:20px;margin-bottom:8px">Aquí aparecerá la predicción</h2>
+        <p class="suave">Verás la probabilidad, el veredicto y qué atributos empujaron la decisión hacia héroe o villano.</p>
+      </div>
+      <div id="resultado" class="oculto" style="display:flex;flex-direction:column;gap:18px">
+        <div class="panel" style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+          <div class="dona" id="dona"><div><b id="pct" style="font-size:30px">–</b><span class="suave">prob. héroe</span></div></div>
+          <div style="flex:1 1 220px">
+            <p class="suave">Veredicto del modelo</p>
+            <h2 id="veredicto" style="font-size:32px">–</h2>
+            <p class="suave" id="detalle"></p>
+          </div>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+          <h3>¿Qué pesó en la predicción?</h3>
+          <p class="suave" id="metodo"></p>
+          <div id="barras" style="display:flex;flex-direction:column;gap:10px"></div>
+          <p class="suave">Barra a la derecha (azul): empuja hacia «héroe». A la izquierda (naranjo): hacia «villano».</p>
+        </div>
+        <div class="panel" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <span>¿Conoces la alineación real?</span>
+          <button class="btn2" type="button" data-real="Héroe">Era héroe</button>
+          <button class="btn2" type="button" data-real="Villano">Era villano</button>
+          <span id="gracias" class="suave"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MONITOREO -->
+  <section id="monitoreo" class="oculto" style="display:flex;flex-direction:column;gap:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:24px">Monitoreo del modelo en uso</h2>
+      <button class="btn2" type="button" id="refrescar">Actualizar</button>
+    </div>
+    <div id="alertas"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="fila">
+      <div class="panel" style="flex:1 1 380px">
+        <h3 style="margin-bottom:10px">Deriva de datos: % de faltantes</h3>
+        <table><thead><tr><th>Variable</th><th>Entrenamiento</th><th>En uso</th></tr></thead><tbody id="deriva"></tbody></table>
+      </div>
+      <div class="panel" style="flex:2 1 520px;overflow-x:auto">
+        <h3 style="margin-bottom:10px">Últimas predicciones</h3>
+        <table><thead><tr><th>Fecha (UTC)</th><th>Clase</th><th>Prob. héroe</th><th>Latencia (ms)</th></tr></thead><tbody id="ultimas"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODELO -->
+  <section id="modelo" class="oculto" style="display:flex;flex-direction:column;gap:20px">
+    <h2 style="font-size:24px">Modelo desplegado</h2>
+    <div class="kpis" id="metricas"></div>
+    <div class="panel">
+      <p class="suave" style="font-size:14px">El modelo se entrenó con el 70 % de los personajes buenos y malos del dataset de DC Wikia (FiveThirtyEight) y se evaluó una sola vez con el 30 % restante. Los hiperparámetros se eligieron con validación cruzada estratificada de 5 pliegues. Las métricas mostradas son las de ese conjunto de prueba.</p>
+    </div>
+  </section>
+</main>
+<script>
+const ETIQUETAS = {
+  ID:"Tipo de identidad", SEX:"Sexo", EYE:"Color de ojos", HAIR:"Color de pelo", ALIVE:"Estado", GSM:"Minoría sexual o de género",
+  APPEARANCES:"Apariciones", YEAR:"Año de primera aparición"
+};
+const TRAD = {
+  "Secret Identity":"Identidad secreta","Public Identity":"Identidad pública","Identity Unknown":"Identidad desconocida",
+  "Male Characters":"Masculino","Female Characters":"Femenino","Genderless Characters":"Sin género","Transgender Characters":"Transgénero",
+  "Living Characters":"Vivo","Deceased Characters":"Fallecido"
+};
+const COLORES = {Black:"Negro",Blue:"Azul",Brown:"Café",Green:"Verde",Red:"Rojo",White:"Blanco",Yellow:"Amarillo",Grey:"Gris",Hazel:"Avellana",
+  Purple:"Morado",Violet:"Violeta",Orange:"Naranjo",Gold:"Dorado",Pink:"Rosado",Amber:"Ámbar",Blond:"Rubio",Silver:"Plateado",Platinum:"Platinado",
+  Strawberry:"Rubio rojizo",Reddish:"Castaño rojizo",Auburn:"Caoba",Photocellular:"Fotocelular",Bald:"Calvo"};
+const t = v => {
+  if (TRAD[v]) return TRAD[v];
+  const base = v.replace(/ (Eyes|Hair)$/, "");
+  if (base === "Bald") return "Calvo";
+  const w = base.split(" ");
+  const tr = w.map(x => COLORES[x] || x);
+  if (base.startsWith("Strawberry")) return "Rubio rojizo";
+  if (base.startsWith("Reddish")) return "Castaño rojizo";
+  if (base.startsWith("Platinum")) return "Rubio platinado";
+  return tr.join(" ") + (v.endsWith("Hair") && v.startsWith("Auburn") ? "" : "");
+};
+const ORDEN = ["ID","SEX","ALIVE","EYE","HAIR","GSM"];
+const dec = (x, d=1) => Number(x).toFixed(d).replace(".", ",");
+const fmt = x => (x*100).toFixed(1).replace(".", ",") + " %";
+let ultimoId = null;
+
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  ["predictor","monitoreo","modelo"].forEach(id => document.getElementById(id).classList.toggle("oculto", id !== b.dataset.tab));
+  if (b.dataset.tab === "monitoreo") cargarMonitoreo();
+}));
+
+async function iniciar(){
+  const r = await fetch("/api/opciones"); const d = await r.json();
+  const cont = document.getElementById("campos-cat");
+  ORDEN.filter(v => d.opciones[v]).map(v => [v, d.opciones[v]]).forEach(([v, ops]) => {
+    const lab = document.createElement("label"); lab.textContent = ETIQUETAS[v] || v;
+    const sel = document.createElement("select"); sel.name = v;
+    sel.append(new Option("No informado", ""));
+    ops.forEach(o => sel.append(new Option(t(o), o)));
+    lab.append(sel); cont.append(lab);
+  });
+  const m = document.getElementById("metricas");
+  m.innerHTML = `<div class="kpi">Modelo<b>${d.modelo}</b></div>` +
+    Object.entries(d.metricas_prueba).map(([k,v]) => `<div class="kpi">${k} (prueba)<b>${v.toFixed(3).replace(".", ",")}</b></div>`).join("") +
+    `<div class="kpi">Explicación<b style="font-size:16px">${d.explicacion}</b></div>`;
+}
+
+document.getElementById("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const datos = Object.fromEntries(new FormData(e.target).entries());
+  const err = document.getElementById("error"); err.classList.add("oculto");
+  const r = await fetch("/api/predecir", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+  const d = await r.json();
+  if (!r.ok){ err.textContent = (d.errores || ["Error al predecir"]).join(" · "); err.classList.remove("oculto"); return; }
+  ultimoId = d.id; document.getElementById("gracias").textContent = "";
+  document.getElementById("vacio").classList.add("oculto");
+  document.getElementById("resultado").classList.remove("oculto");
+  const p = d.prob_heroe, heroe = d.clase === "Héroe";
+  document.getElementById("dona").style.background = `conic-gradient(var(--heroe) 0 ${p*100}%, var(--villano) ${p*100}% 100%)`;
+  document.getElementById("pct").textContent = fmt(p);
+  const v = document.getElementById("veredicto");
+  v.textContent = "Probable " + (heroe ? "HÉROE" : "VILLANO"); v.style.color = heroe ? "#7cc4ff" : "#ffb066";
+  const conf = Math.abs(p - 0.5) * 2;
+  document.getElementById("detalle").textContent = `Confianza ${conf < 0.2 ? "baja" : conf < 0.5 ? "media" : "alta"} · modelo: ${d.modelo} · ${dec(d.latencia_ms,0)} ms`;
+  document.getElementById("metodo").textContent = "Método: " + d.metodo_explicacion;
+  const max = Math.max(...d.explicacion.map(x => Math.abs(x.aporte)), 1e-6);
+  document.getElementById("barras").innerHTML = d.explicacion.map(x => {
+    const w = Math.abs(x.aporte) / max * 50, pos = x.aporte >= 0;
+    return `<div class="barra"><span>${ETIQUETAS[x.variable] || x.variable}</span>
+      <div class="pista" role="img" aria-label="${x.aporte}"><span style="${pos ? `left:50%` : `left:${50-w}%`};width:${w}%;background:${pos ? "var(--heroe)" : "var(--villano)"}"></span></div>
+      <span class="suave">${x.aporte > 0 ? "+" : ""}${x.aporte.toFixed(3).replace(".", ",")}</span></div>`;
+  }).join("");
+});
+
+document.querySelectorAll("[data-real]").forEach(b => b.addEventListener("click", async () => {
+  if (!ultimoId) return;
+  await fetch("/api/retroalimentacion", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({id:ultimoId, real:b.dataset.real})});
+  document.getElementById("gracias").textContent = "Gracias: se usará para medir el desempeño en uso.";
+}));
+
+async function cargarMonitoreo(){
+  const d = await (await fetch("/api/monitoreo")).json();
+  document.getElementById("alertas").innerHTML = (d.alertas && d.alertas.length)
+    ? d.alertas.map(a => `<p class="alerta">${a}</p>`).join("")
+    : `<p class="ok">Sin alertas: el uso se mantiene dentro de los rangos del entrenamiento.</p>`;
+  const k = [["Predicciones", d.n_predicciones ?? 0]];
+  if (d.n_predicciones){
+    k.push(["% héroes predichos", fmt(d.prop_heroe_predicha)], ["Latencia media", dec(d.latencia_media_ms,0) + " ms"], ["Latencia p95", dec(d.latencia_p95_ms,0) + " ms"],
+           ["Retroalimentaciones", d.n_retroalimentacion], ["Exactitud en uso", d.exactitud_en_uso == null ? "—" : fmt(d.exactitud_en_uso)],
+           ["Exactitud en prueba", fmt(d.metricas_prueba.Exactitud)]);
+  }
+  document.getElementById("kpis").innerHTML = k.map(([a,b]) => `<div class="kpi">${a}<b>${b}</b></div>`).join("");
+  document.getElementById("deriva").innerHTML = (d.deriva_faltantes || []).map(x =>
+    `<tr><td>${ETIQUETAS[x.variable] || x.variable}</td><td>${dec(x.faltantes_ref_pct)} %</td><td>${dec(x.faltantes_uso_pct)} %</td></tr>`).join("");
+  document.getElementById("ultimas").innerHTML = (d.ultimas || []).map(x =>
+    `<tr><td>${String(x.fecha).replace('T',' ').replace('+00:00','')}</td><td>${x.clase}</td><td>${fmt(x.prob_heroe)}</td><td>${dec(x.latencia_ms,0)}</td></tr>`).join("");
+}
+document.getElementById("refrescar").addEventListener("click", cargarMonitoreo);
+iniciar();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Aplicación web (back end + front end)
+# IMPORTANTE: usa la MISMA versión de scikit-learn con la que se ejecutó el notebook
+# (aparece en la primera celda y en salidas/resumen.json -> entorno.scikit_learn).
+flask>=3.0
+gunicorn>=22.0
+pandas
+numpy
+scikit-learn
+joblib
+shap   # opcional: si no está instalado, la app explica por oclusión
